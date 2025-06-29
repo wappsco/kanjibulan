@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcard Kanji Nama Bulan (Acak)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Noto Sans JP for Japanese characters -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .font-jp {
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+        /* Styling for the 3D flip effect */
+        .card-container {
+            perspective: 1000px;
+        }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .card-container.is-flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden; /* Safari */
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .card-front {
+            background-color: white;
+            color: black;
+        }
+        .card-back {
+            background-color: #2D3748; /* gray-800 */
+            color: white;
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="text-center mb-8">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white">Flashcard Kanji Bulan (Acak)</h1>
+        <p class="text-gray-600 dark:text-gray-300 mt-2">Klik kartu untuk melihat jawaban. Semangat belajar, Towi!</p>
+    </div>
+
+    <!-- Flashcard Component -->
+    <div id="flashcard" class="card-container w-full max-w-md h-64 md:h-80 cursor-pointer">
+        <div id="cardInner" class="card-inner">
+            <!-- Front of the card (Kanji) -->
+            <div class="card-face card-front">
+                <h2 id="kanji" class="font-jp text-6xl md:text-8xl font-bold"></h2>
+            </div>
+            <!-- Back of the card (Hiragana, Romaji & Indonesian) -->
+            <div class="card-face card-back p-6 text-center">
+                <p id="hiragana" class="font-jp text-3xl md:text-4xl"></p>
+                <p id="romaji" class="text-2xl md:text-3xl font-semibold mt-2"></p>
+                <p id="indonesian" class="text-xl md:text-2xl mt-4"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Button (Single Button) -->
+    <div class="flex justify-center mt-8">
+        <button id="nextCardBtn" class="bg-white dark:bg-gray-700 text-gray-800 dark:text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200">
+            Kartu Berikutnya
+        </button>
+    </div>
+
+    <script>
+        // --- Data ---
+        const months = [
+            { kanji: '一月', hiragana: 'いちがつ', romaji: 'Ichigatsu', indonesian: 'Januari' },
+            { kanji: '二月', hiragana: 'にがつ', romaji: 'Nigatsu', indonesian: 'Februari' },
+            { kanji: '三月', hiragana: 'さんがつ', romaji: 'Sangatsu', indonesian: 'Maret' },
+            { kanji: '四月', hiragana: 'しがつ', romaji: 'Shigatsu', indonesian: 'April' },
+            { kanji: '五月', hiragana: 'ごがつ', romaji: 'Gogatsu', indonesian: 'Mei' },
+            { kanji: '六月', hiragana: 'ろくがつ', romaji: 'Rokugatsu', indonesian: 'Juni' },
+            { kanji: '七月', hiragana: 'しちがつ', romaji: 'Shichigatsu', indonesian: 'Juli' },
+            { kanji: '八月', hiragana: 'はちがつ', romaji: 'Hachigatsu', indonesian: 'Agustus' },
+            { kanji: '九月', hiragana: 'くがつ', romaji: 'Kugatsu', indonesian: 'September' },
+            { kanji: '十月', hiragana: 'じゅうがつ', romaji: 'Jūgatsu', indonesian: 'Oktober' },
+            { kanji: '十一月', hiragana: 'じゅういちがつ', romaji: 'Jūichigatsu', indonesian: 'November' },
+            { kanji: '十二月', hiragana: 'じゅうにがつ', romaji: 'Jūnigatsu', indonesian: 'Desember' }
+        ];
+
+        // --- Shuffled Deck ---
+        // Create a copy of the original array to shuffle
+        let shuffledMonths = [...months];
+        
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // --- State ---
+        let currentIndex = 0;
+        let isFlipped = false;
+
+        // --- DOM Elements ---
+        const flashcard = document.getElementById('flashcard');
+        const cardInner = document.getElementById('cardInner');
+        const kanjiEl = document.getElementById('kanji');
+        const hiraganaEl = document.getElementById('hiragana');
+        const romajiEl = document.getElementById('romaji');
+        const indonesianEl = document.getElementById('indonesian');
+        const nextCardBtn = document.getElementById('nextCardBtn');
+
+        // --- Functions ---
+        function updateCardContent() {
+            // If we've gone through all cards, reshuffle the deck
+            if (currentIndex >= shuffledMonths.length) {
+                currentIndex = 0;
+                shuffleArray(shuffledMonths);
+            }
+            const currentMonth = shuffledMonths[currentIndex];
+            kanjiEl.textContent = currentMonth.kanji;
+            hiraganaEl.textContent = currentMonth.hiragana;
+            romajiEl.textContent = currentMonth.romaji;
+            indonesianEl.textContent = currentMonth.indonesian;
+        }
+
+        function resetFlip() {
+            if (isFlipped) {
+                flashcard.classList.remove('is-flipped');
+                isFlipped = false;
+            }
+        }
+
+        function showNextCard() {
+            currentIndex++;
+            resetFlip();
+            setTimeout(updateCardContent, 150);
+        }
+
+        function flipCard() {
+            isFlipped = !isFlipped;
+            flashcard.classList.toggle('is-flipped');
+        }
+
+        // --- Event Listeners ---
+        flashcard.addEventListener('click', flipCard);
+        nextCardBtn.addEventListener('click', showNextCard);
+
+        // --- Initial Load ---
+        shuffleArray(shuffledMonths);
+        updateCardContent();
+
+    </script>
+</body>
+</html>
